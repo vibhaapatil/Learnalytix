@@ -1,4 +1,11 @@
 // src/pages/StudentLookup.jsx
+//
+// Fix log:
+//   - NEW: now reads from /api/students (MongoDB) instead of the bundled
+//     students.json + live /api/predict/batch calls, so it always reflects
+//     whichever CSV was last uploaded via the admin Upload page
+//   - NEW: doc.recommendations (SHAP-derived) passed through on each row so
+//     StudentProfile has them immediately without a second fetch
 
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +14,23 @@ import "../css/StudentLookup.css";
 
 const RISK_COLOR = { High: "#e74c3c", Medium: "#f39c12", Low: "#27ae60" };
 const RISK_BG    = { High: "#fdf0ef", Medium: "#fef9ef", Low: "#edfaf3" };
+const API_BASE   = "http://localhost:5000/api";
+
+// Flatten the nested Mongo doc shape ({ predictions: {...}, recommendations: [...] })
+// into the flat fields this page (and StudentProfile) expect.
+function flattenStudent(doc) {
+  const p = doc.predictions || {};
+  return {
+    ...doc,
+    dropout_risk:           p.dropout_risk,
+    dropout_confidence:     p.dropout_confidence,
+    dropout_probabilities:  p.dropout_probabilities,
+    pass_fail:              p.pass_fail,
+    passfail_confidence:    p.passfail_confidence,
+    passfail_probabilities: p.passfail_probabilities,
+    recommendations:        doc.recommendations || [],
+  };
+}
 
 function riskPill(risk) {
   return (
@@ -49,41 +73,13 @@ export default function StudentLookup() {
 
     async function load() {
       try {
-        let raw;
-        try {
-          const mod = await import("../data/students.json");
-          raw = mod.default;
-        } catch {
-          const res = await fetch("/students.json");
-          if (!res.ok) throw new Error("Could not load students.json");
-          raw = await res.json();
-        }
+        const res = await fetch(`${API_BASE}/students`);
+        if (!res.ok) throw new Error("API error: " + res.status);
+        const data = await res.json();
+        const flat = (data.students || []).map(flattenStudent);
 
-        const CHUNK = 50;
-        const allResults = [];
-
-        for (let i = 0; i < raw.length; i += CHUNK) {
-          const chunk = raw.slice(i, i + CHUNK);
-          try {
-            const res = await fetch("http://localhost:5000/api/predict/batch", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ students: chunk }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              const merged = chunk.map((s, j) => ({ ...s, ...data.results[j] }));
-              allResults.push(...merged);
-            } else {
-              allResults.push(...chunk);
-            }
-          } catch {
-            allResults.push(...chunk);
-          }
-        }
-
-        setCached(allResults);
-        setStudents(allResults);
+        setCached(flat);
+        setStudents(flat);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -156,7 +152,8 @@ export default function StudentLookup() {
       <span className="sl-error-icon">⚠</span>
       <p>{error}</p>
       <p className="sl-error-hint">
-        Make sure <code>students.json</code> is in <code>src/data/</code> and Flask is running.
+        Make sure Flask is running (<code>python ml/app.py</code>) and a CSV has been
+        uploaded from the admin Upload page.
       </p>
     </div>
   );

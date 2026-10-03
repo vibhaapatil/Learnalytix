@@ -1,11 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/Register.css";
 
-export default function Register({ onBackToLogin }) {
+// Set this to wherever your Flask app runs. Consider moving to a .env
+// (VITE_API_URL) instead of hardcoding once you deploy.
+const API_URL = "http://localhost:5000/api";
+
+export default function Register() {
+  const navigate = useNavigate();
+  const goToLogin = () => navigate("/");
+
   const [step, setStep] = useState(1); // step 1 = personal info, step 2 = account setup
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
@@ -13,36 +22,22 @@ export default function Register({ onBackToLogin }) {
     rollNumber: "",
     email: "",
     phone: "",
-    department: "",
-    course: "",
-    year: "",
+    branch: "",
+    semester: "",
     password: "",
     confirmPassword: "",
   });
 
-  const departments = [
-    "Computer Science & Engineering",
-    "Mechanical Engineering",
-    "Civil Engineering",
-    "Electronics & Communication",
-    "Business Administration",
-    "Physics",
-    "Mathematics",
-    "Commerce",
+  // Matches VALID_BRANCHES in auth_routes.py / your students collection.
+  const branches = [
+    { code: "CST", label: "Computer Science & Technology" },
+    { code: "CE",  label: "Civil Engineering" },
+    { code: "AI",  label: "Artificial Intelligence" },
+    { code: "DS",  label: "Data Science" },
+    { code: "ENC", label: "Electronics & Communication" },
   ];
 
-  const courses = {
-    "Computer Science & Engineering": ["B.Tech", "M.Tech", "MCA"],
-    "Mechanical Engineering": ["B.Tech", "M.Tech", "Diploma"],
-    "Civil Engineering": ["B.Tech", "M.Tech", "Diploma"],
-    "Electronics & Communication": ["B.Tech", "M.Tech"],
-    "Business Administration": ["BBA", "MBA"],
-    "Physics": ["B.Sc", "M.Sc", "Ph.D"],
-    "Mathematics": ["B.Sc", "M.Sc", "Ph.D"],
-    "Commerce": ["B.Com", "M.Com"],
-  };
-
-  const years = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+  const semesters = [1, 2, 3, 4, 5, 6, 7, 8];
 
   const update = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -55,9 +50,8 @@ export default function Register({ onBackToLogin }) {
     if (!form.rollNumber.trim()) e.rollNumber = "Roll number is required.";
     if (!form.email.trim()) e.email = "Email is required.";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email.";
-    if (!form.department) e.department = "Please select a department.";
-    if (!form.course) e.course = "Please select a course.";
-    if (!form.year) e.year = "Please select your year.";
+    if (!form.branch) e.branch = "Please select your branch.";
+    if (!form.semester) e.semester = "Please select your semester.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -76,9 +70,46 @@ export default function Register({ onBackToLogin }) {
     if (validateStep1()) setStep(2);
   };
 
-  const handleSubmit = () => {
-    if (validateStep2()) {
-      setTimeout(() => setSuccess(true), 900);
+  const handleSubmit = async () => {
+    if (!validateStep2()) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.fullName,
+          rollNumber: form.rollNumber,
+          email: form.email,
+          phone: form.phone,
+          branch: form.branch,
+          semester: form.semester,
+          password: form.password,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Backend returns field-level errors (roll number not found, branch/
+        // semester mismatch, duplicate email, etc.) in the same shape as
+        // this form's local `errors` state.
+        setErrors(data.errors || { fullName: "Registration failed. Please try again." });
+        setSubmitting(false);
+        if (data.errors && (data.errors.email || data.errors.rollNumber || data.errors.branch || data.errors.semester)) {
+          setStep(1);
+        }
+        return;
+      }
+
+      // Registration also returns a token, so the new student is signed in
+      // immediately rather than having to log in again right after.
+      localStorage.setItem("learnalytix_token", data.token);
+      setSubmitting(false);
+      setSuccess(true);
+    } catch (err) {
+      setSubmitting(false);
+      setErrors({ fullName: "Could not reach the server. Please try again." });
     }
   };
 
@@ -106,7 +137,7 @@ export default function Register({ onBackToLogin }) {
             <p className="rg-success-sub">
               Welcome, <strong>{form.fullName}</strong>! Your student account has been created. You can now sign in to access your portal.
             </p>
-            <button className="rg-submit-btn" onClick={onBackToLogin}>
+            <button className="rg-submit-btn" onClick={goToLogin}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
                 <polyline points="10 17 15 12 10 7"/>
@@ -184,6 +215,7 @@ export default function Register({ onBackToLogin }) {
                     onChange={(e) => update("rollNumber", e.target.value)}
                   />
                   {errors.rollNumber && <span className="rg-err">{errors.rollNumber}</span>}
+                  <span className="rg-hint">Must already be on file — ask your admin if it's not recognized.</span>
                 </div>
                 <div className="rg-field">
                   <label>Phone (optional)</label>
@@ -207,41 +239,28 @@ export default function Register({ onBackToLogin }) {
                 {errors.email && <span className="rg-err">{errors.email}</span>}
               </div>
 
-              <div className="rg-field">
-                <label>Department</label>
-                <select
-                  value={form.department}
-                  onChange={(e) => { update("department", e.target.value); update("course", ""); }}
-                >
-                  <option value="">Select department</option>
-                  {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-                {errors.department && <span className="rg-err">{errors.department}</span>}
-              </div>
-
               <div className="rg-row">
                 <div className="rg-field">
-                  <label>Course</label>
+                  <label>Branch</label>
                   <select
-                    value={form.course}
-                    onChange={(e) => update("course", e.target.value)}
-                    disabled={!form.department}
+                    value={form.branch}
+                    onChange={(e) => update("branch", e.target.value)}
                   >
-                    <option value="">Select course</option>
-                    {form.department && courses[form.department]?.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value="">Select branch</option>
+                    {branches.map((b) => <option key={b.code} value={b.code}>{b.label}</option>)}
                   </select>
-                  {errors.course && <span className="rg-err">{errors.course}</span>}
+                  {errors.branch && <span className="rg-err">{errors.branch}</span>}
                 </div>
                 <div className="rg-field">
-                  <label>Year of study</label>
+                  <label>Current semester</label>
                   <select
-                    value={form.year}
-                    onChange={(e) => update("year", e.target.value)}
+                    value={form.semester}
+                    onChange={(e) => update("semester", e.target.value)}
                   >
-                    <option value="">Select year</option>
-                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                    <option value="">Select semester</option>
+                    {semesters.map((s) => <option key={s} value={s}>Semester {s}</option>)}
                   </select>
-                  {errors.year && <span className="rg-err">{errors.year}</span>}
+                  {errors.semester && <span className="rg-err">{errors.semester}</span>}
                 </div>
               </div>
 
@@ -261,8 +280,8 @@ export default function Register({ onBackToLogin }) {
                 <div className="rg-review-avatar">{form.fullName.charAt(0).toUpperCase()}</div>
                 <div>
                   <div className="rg-review-name">{form.fullName}</div>
-                  <div className="rg-review-meta">{form.course} · {form.department}</div>
-                  <div className="rg-review-meta">{form.rollNumber} · {form.year}</div>
+                  <div className="rg-review-meta">{form.branch} · Semester {form.semester}</div>
+                  <div className="rg-review-meta">{form.rollNumber}</div>
                 </div>
               </div>
 
@@ -311,11 +330,11 @@ export default function Register({ onBackToLogin }) {
                   </svg>
                   Back
                 </button>
-                <button className="rg-submit-btn rg-submit-flex" onClick={handleSubmit}>
+                <button className="rg-submit-btn rg-submit-flex" onClick={handleSubmit} disabled={submitting}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
-                  Create account
+                  {submitting ? "Creating account…" : "Create account"}
                 </button>
               </div>
             </div>
@@ -323,7 +342,7 @@ export default function Register({ onBackToLogin }) {
 
           <p className="rg-login-row">
             Already have an account?{" "}
-            <span className="rg-login-link" onClick={onBackToLogin}>Sign in →</span>
+            <span className="rg-login-link" onClick={goToLogin}>Sign in →</span>
           </p>
         </div>
 

@@ -149,11 +149,34 @@
 .sp-kv strong.warn { color: #e74c3c; }
 
 /* ── Semester chart ── */
-.sp-sem-chart h4 { font-size: 0.9rem; font-weight: 600; color: #08060d; margin: 0 0 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.sp-sem-chart {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.sp-sem-chart h4 {
+  position: static !important;
+  top: auto; left: auto; right: auto; bottom: auto;
+  transform: none;
+  order: 0;                 /* force first in flex order */
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #08060d;
+  margin: 0 0 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: left;
+}
+
 .sp-sem-bars {
+  position: static !important;   /* undo any absolute top:0 pin */
+  top: auto; left: auto; right: auto; bottom: auto;
+  order: 1;                      /* force after the heading */
   display: flex; justify-content: space-around; align-items: flex-end;
   height: 120px; gap: 8px;
 }
+
 .sp-sem-col {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
   flex: 1;
@@ -188,8 +211,8 @@
 .legend-dot {
   width: 10px; height: 10px; border-radius: 2px; display: inline-block;
 }
-.legend-dot.sgpa { background: #3d3d8f; }
-.legend-dot.att  { background: #27ae60; }
+.legend-dot.sgpa { background: #3d3d8f; }  /* navy */
+.legend-dot.att  { background: #27ae60; }  /* green */
 
 /* ── Predictions card ── */
 .sp-pred-card {}

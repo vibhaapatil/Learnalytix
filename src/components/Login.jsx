@@ -1,71 +1,82 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../css/Login.css";
 
-export default function Login({ onLogin ,onRegister}) {
+// Set this to wherever your Flask app runs. Consider moving to a .env
+// (VITE_API_URL) instead of hardcoding once you deploy.
+const API_URL = "http://localhost:5000/api";
+
+export default function Login({ onLogin }) {
+  const navigate = useNavigate();
   const [role, setRole] = useState("admin");
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // username (admin) or email/roll no (student)
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loggedInName, setLoggedInName] = useState("");
 
   const handleRoleSwitch = (r) => {
     setRole(r);
     setError("");
-    setEmail("");
+    setIdentifier("");
     setPassword("");
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
-    if (!email.trim()) {
-      setError("Please enter your email or roll number.");
+    if (!identifier.trim()) {
+      setError(role === "admin" ? "Please enter your username." : "Please enter your email or roll number.");
       return;
     }
     if (!password) {
       setError("Please enter your password.");
       return;
     }
-    if (password.length < 4) {
-      setError("Incorrect password. Please try again.");
-      return;
-    }
+
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // Backend takes `email` as a generic identifier field — for admin
+        // role it's treated as `username`, for student it's email or roll_no.
+        body: JSON.stringify({ email: identifier.trim(), password, role }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Login failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("learnalytix_token", data.token);
+
+      setLoggedInName(data.user.name);
       setLoading(false);
       setSuccess(true);
-      if (onLogin) onLogin(role);
-    }, 1100);
+      if (onLogin) onLogin(data.user.role, data.user.name);
+    } catch (err) {
+      setLoading(false);
+      setError("Could not reach the server. Please try again.");
+    }
   };
 
+  // NOTE: SSO is still mocked — wiring real Google/Institution SSO needs
+  // OAuth setup (client ID, redirect URI, callback route) which is a
+  // separate task from the username/email + password flow above.
   const handleSSO = (provider) => {
-    setEmail(`sso@institution.edu`);
-    setTimeout(() => {
-      setSuccess(true);
-      if (onLogin) onLogin(role);
-    }, 900);
+    setError("SSO sign-in isn't connected yet.");
   };
 
   const handleReset = () => {
     setSuccess(false);
-    setEmail("");
+    setIdentifier("");
     setPassword("");
     setError("");
-  };
-
-  const userMeta = {
-    admin: {
-      name: "Priya Sharma",
-      subtitle: "3 new alerts · 47 students at risk today",
-      btnLabel: "Go to admin dashboard",
-    },
-    student: {
-      name: "Arjun Mehta",
-      subtitle: "You have 3 nudges · Study streak: 5 days",
-      btnLabel: "Go to my dashboard",
-    },
   };
 
   return (
@@ -113,17 +124,17 @@ export default function Login({ onLogin ,onRegister}) {
               </div>
             )}
 
-            {/* Email */}
+            {/* Identifier: username for admin, email/roll no for student */}
             <div className="ll-field">
               <label htmlFor="ll-email">
-                {role === "admin" ? "Work email" : "Email or roll number"}
+                {role === "admin" ? "Username" : "Email or roll number"}
               </label>
               <input
                 id="ll-email"
-                type="email"
-                placeholder={role === "admin" ? "you@institution.edu" : "roll@college.edu or 2021CS001"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="text"
+                placeholder={role === "admin" ? "e.g. admin1" : "roll@college.edu or 2021CS001"}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 autoComplete="off"
               />
             </div>
@@ -189,9 +200,7 @@ export default function Login({ onLogin ,onRegister}) {
 
             <p className="ll-signup-row">
               New here?{" "}
-              {role === "student" && (
-  <span className="ll-signup-link" onClick={onRegister}>Register →</span>
-)}
+              <span className="ll-signup-link" onClick={() => navigate("/register")}>Register →</span>
             </p>
           </div>
         ) : (
@@ -204,10 +213,9 @@ export default function Login({ onLogin ,onRegister}) {
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
               )}
             </div>
-            <h2 className="ll-success-title">Welcome back, {userMeta[role].name}</h2>
-            <p className="ll-success-sub">{userMeta[role].subtitle}</p>
+            <h2 className="ll-success-title">Welcome back, {loggedInName}</h2>
             <button className={`ll-login-btn${role === "student" ? " student" : ""}`} style={{ maxWidth: 240, margin: "0 auto" }}>
-              {userMeta[role].btnLabel}
+              {role === "admin" ? "Go to admin dashboard" : "Go to my dashboard"}
             </button>
             <button className="ll-reset-btn" onClick={handleReset}>← Use a different account</button>
           </div>
@@ -216,7 +224,7 @@ export default function Login({ onLogin ,onRegister}) {
         <p className="ll-copyright">© 2026 Learnalyntix</p>
       </div>
 
-      {/* ── Right panel ── */}
+      {/* ── Right panel (unchanged) ── */}
       <div className="ll-right">
         <div className="ll-right-content">
           <h2 className="ll-right-heading">

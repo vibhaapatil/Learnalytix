@@ -1,0 +1,209 @@
+/* src/css/Analytics.css */
+
+@keyframes anFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.an-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem 3rem;
+  font-family: 'Inter', sans-serif;
+  animation: anFadeIn 0.3s ease both;
+}
+
+.an-page h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 1.25rem;
+}
+
+.an-loading {
+  text-align: center;
+  padding: 4rem;
+  color: #888;
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────── */
+
+.an-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.an-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.an-filters select {
+  padding: 7px 12px;
+  border: 1px solid #d0d0e0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: #333;
+  background: #fff;
+  outline: none;
+  min-width: 130px;
+  cursor: pointer;
+}
+
+.an-risk-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.an-risk-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-right: 4px;
+}
+
+.an-risk-tag {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid #d0d0e0;
+  background: #fff;
+  color: #555;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.an-risk-tag.active { color: #fff; }
+.an-risk-tag:not(.active):hover { border-color: #999; color: #333; }
+
+.an-showing {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 1.25rem;
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+
+.an-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .an-row { grid-template-columns: 1fr; }
+}
+
+.an-card {
+  background: #fff;
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.an-card.an-full { margin-bottom: 1.5rem; }
+
+.an-card h4 {
+  margin: 0 0 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5b5b8a;
+}
+
+/* ── Heatmap ──────────────────────────────────────────────────────────── */
+
+.an-heatmap-wrap { overflow-x: auto; }
+
+.an-heatmap {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.an-heatmap th {
+  padding: 6px 10px;
+  font-weight: 600;
+  color: #555;
+}
+
+.an-heatmap thead th:first-child { background: transparent; }
+
+.an-heatmap tbody th {
+  text-align: left;
+  color: #333;
+}
+
+.an-heatmap td {
+  padding: 10px;
+  font-weight: 700;
+  color: #1a1a2e;
+  border-radius: 4px;
+}
+
+.an-heatmap-legend {
+  font-size: 0.74rem;
+  color: #999;
+  margin: 0.75rem 0 0;
+}
+
+/* ── Subject SGPA table ───────────────────────────────────────────────── */
+
+.an-table-wrap { overflow-x: auto; }
+
+.an-sgpa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+}
+
+.an-sgpa-table th {
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #888;
+  border-bottom: 1px solid #e8e8f0;
+  white-space: nowrap;
+}
+
+.an-sgpa-table th:first-child { text-align: left; }
+
+.an-sgpa-table td {
+  padding: 8px 12px;
+  text-align: center;
+  color: #333;
+  border-bottom: 1px solid #f0f0f8;
+}
+
+.an-branch-cell {
+  text-align: left !important;
+  font-weight: 600;
+  color: #1a1a2e !important;
+}
+
+.an-empty {
+  text-align: center;
+  color: #aaa;
+  padding: 1.5rem;
+}
