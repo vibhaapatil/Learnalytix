@@ -16,7 +16,7 @@ import os
 from pymongo import MongoClient, ASCENDING, DESCENDING
 
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME   = os.environ.get("MONGO_DB_NAME", "learnalytix")
+DB_NAME   = os.environ.get("MONGO_DB_NAME", "Learnalytix")
 
 _client = None
 
